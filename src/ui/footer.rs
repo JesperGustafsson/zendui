@@ -1,96 +1,73 @@
 use crate::{App, SymbolSize};
 use ratatui::{
     Frame,
-    layout::Rect,
-    style::{Color, Style},
-    text::{Line, Span},
-    widgets::Paragraph,
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Style, Stylize},
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Paragraph},
 }; // import your App type
+
+const SELECTED_STRING: &str = "selected";
 
 pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usize)) {
     let mode = app.mode.to_string();
     let x = app.current_pos.0;
     let y = app.current_pos.1;
     let pyramid_nbr = app.data_big.len();
-    frame.render_widget(
-        Paragraph::new(format!(
-            "pos:{x},{y}, nbr:{pyramid_nbr}\t Press h to show/hide help menu\t  MODE>{mode}"
-        )),
-        area,
-    );
+    let areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(1), Constraint::Length(2)])
+        .split(area);
+    let help_paragraph = Paragraph::new(format!(
+        "pos:{x},{y}, nbr:{pyramid_nbr}\t Press h to show/hide help menu\t  MODE>{mode}"
+    ));
+    frame.render_widget(help_paragraph, areas[0]);
+
+    let text_1 = Text::from(" 1 ").red();
+    let text_2 = Text::from(" 2 ").blue();
+    let line = "red".red();
+    let line2 = "blue".blue();
+    let bla = app
+        .patterns
+        .iter()
+        .enumerate()
+        .map(|(index, pat)| {
+            if index == app.pattern_index {
+                format!(" {index} ").red().underlined()
+            } else {
+                format!(" {index} ").white()
+            }
+        })
+        .collect::<Vec<Span>>();
+    let pattern_tracker = Paragraph::new(Line::from(bla));
+
+    frame.render_widget(pattern_tracker, areas[1]);
 }
 
-pub fn render_colored_pyramid(frame: &mut Frame, area: Rect, height: usize) {
+pub fn render_top_down_pyramid(
+    frame: &mut Frame,
+    area: Rect,
+    height: SymbolSize,
+    color: Color,
+    selected_symbol: bool,
+) {
     let mut lines = vec![];
 
-    for i in 0..height {
-        let spaces = " ".repeat(height - i - 1);
-        let left_side = Span::styled("█".repeat(i + 1), Style::default().fg(Color::Blue));
-        let right_side = Span::styled("█".repeat(i), Style::default().fg(Color::Yellow));
-
-        let line = Line::from(vec![Span::raw(spaces), left_side, right_side]);
-
-        lines.push(line);
-    }
-
-    let paragraph = Paragraph::new(lines);
-    frame.render_widget(paragraph, area);
-}
-
-pub fn render_side_pyramid(frame: &mut Frame, area: Rect, height: usize) {
-    let mut lines = vec![];
-
-    // Ascending part (left side, blue)
-    for i in 1..=height {
-        lines.push(Line::from(Span::styled(
-            "█".repeat(i),
-            Style::default().fg(Color::Blue),
-        )));
-    }
-
-    // Descending part (right side, yellow)
-    for i in (1..height).rev() {
-        lines.push(Line::from(Span::styled(
-            "█".repeat(i),
-            Style::default().fg(Color::Yellow),
-        )));
-    }
-
-    let paragraph = Paragraph::new(lines);
-    frame.render_widget(paragraph, area);
-}
-
-pub fn render_flat_pyramid(frame: &mut Frame, area: Rect, height: usize) {
-    let mut lines = vec![];
-
-    for i in 0..height {
-        let count = i * 2 + 1;
-        let color = if i < height / 2 {
-            Color::Blue
-        } else {
-            Color::Yellow
-        };
-        lines.push(Line::from(Span::styled(
-            "█".repeat(count),
-            Style::default().fg(color),
-        )));
-    }
-
-    let paragraph = Paragraph::new(lines);
-    frame.render_widget(paragraph, area);
-}
-
-pub fn render_top_down_pyramid(frame: &mut Frame, area: Rect, height: SymbolSize, color: Color) {
-    let mut lines = vec![];
-
-    let height = match height {
-        SymbolSize::SMALL => 8,
-        SymbolSize::MEDIUM => 12,
-        SymbolSize::LARGE => 16,
-        _ => 12,
+    let pyramid_height = match height {
+        SymbolSize::SMALL => 4,
+        SymbolSize::MEDIUM => 6,
+        SymbolSize::LARGE => 8,
+        _ => 6,
     };
 
-    for i in 0..((16 - height) / 2) {
+    let empty_line_nbr = match height {
+        SymbolSize::SMALL => 2,
+        SymbolSize::MEDIUM => 1,
+        SymbolSize::LARGE => 0,
+        _ => 1,
+    };
+
+    for i in 0..empty_line_nbr {
         let empty = " ".repeat(1);
 
         lines.push(Line::from(Span::styled(
@@ -100,9 +77,9 @@ pub fn render_top_down_pyramid(frame: &mut Frame, area: Rect, height: SymbolSize
         )));
     }
 
-    for i in 0..(height / 2) {
+    for i in 0..(pyramid_height / 2) {
         let count_alt = 1 + i * 2;
-        let count = height - count_alt;
+        let count = pyramid_height - count_alt;
         let side = "█".repeat(count_alt);
         let side_alt = "▒".repeat(count);
 
@@ -112,9 +89,9 @@ pub fn render_top_down_pyramid(frame: &mut Frame, area: Rect, height: SymbolSize
         )));
     }
 
-    for i in 1..(height / 2) {
-        let count_alt = height - 1 - i * 2;
-        let count = height - count_alt;
+    for i in 1..(pyramid_height / 2) {
+        let count_alt = pyramid_height - 1 - i * 2;
+        let count = pyramid_height - count_alt;
         let side = "█".repeat(count_alt);
         let side_alt = "▒".repeat(count);
 
@@ -125,7 +102,41 @@ pub fn render_top_down_pyramid(frame: &mut Frame, area: Rect, height: SymbolSize
         )));
     }
 
-    let paragraph = Paragraph::new(lines).alignment(ratatui::layout::Alignment::Center);
+    // Consider writing triangles with these fullheight triangle characters from JuliaFont. Also consider using .bg(color)
+
+    let lines_2 = format!(
+        "
+████
+████████
+████████████
+████████████
+████████
+████
+"
+    );
+
+    let lines_3 = format!(
+        "🭇🬼
+🭊🭁🭍🬿
+🭥🭒🭝🭚
+🭢🭗"
+    );
+
+    let border_title = if selected_symbol { SELECTED_STRING } else { "" };
+
+    let paragraph = Paragraph::new(lines)
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::new()
+                .borders(Borders::ALL)
+                .title_bottom(border_title)
+                .title_alignment(Alignment::Center)
+                .border_style(if selected_symbol {
+                    color
+                } else {
+                    Color::DarkGray
+                }),
+        );
     frame.render_widget(paragraph, area);
 }
 
@@ -134,16 +145,24 @@ pub fn render_top_down_pyramid_angled(
     area: Rect,
     height: SymbolSize,
     color: Color,
+    selected_symbol: bool,
 ) {
     let mut lines = vec![];
-    let height = match height {
-        SymbolSize::SMALL => 8,
-        SymbolSize::MEDIUM => 12,
-        SymbolSize::LARGE => 16,
+    let pyramid_height = match height {
+        SymbolSize::SMALL => 4,
+        SymbolSize::MEDIUM => 6,
+        SymbolSize::LARGE => 8,
         _ => 12,
     };
 
-    for i in 0..((16 - height) / 2) {
+    let empty_line_nbr = match height {
+        SymbolSize::SMALL => 2,
+        SymbolSize::MEDIUM => 1,
+        SymbolSize::LARGE => 0,
+        _ => 1,
+    };
+
+    for i in 0..empty_line_nbr {
         let empty = " ".repeat(1);
 
         lines.push(Line::from(Span::styled(
@@ -153,10 +172,10 @@ pub fn render_top_down_pyramid_angled(
         )));
     }
 
-    for i in 0..(height / 2) {
+    for i in 0..(pyramid_height / 2) {
         let count_alt = 1 + i * 2;
-        let empty_count = height - 1 - i * 2;
-        let count = height - empty_count;
+        let empty_count = pyramid_height - 1 - i * 2;
+        let count = pyramid_height - empty_count;
         let side = "█".repeat(count_alt);
         let empty = " ".repeat(empty_count);
         let side_alt = "▒".repeat(count_alt);
@@ -168,10 +187,10 @@ pub fn render_top_down_pyramid_angled(
         )));
     }
 
-    for i in 0..(height / 2) {
-        let count_alt = height - 1 - i * 2;
+    for i in 0..(pyramid_height / 2) {
+        let count_alt = pyramid_height - 1 - i * 2;
         let empty_count = 1 + i * 2;
-        let count = height - empty_count;
+        let count = pyramid_height - empty_count;
         let side = "█".repeat(count_alt);
         let empty = " ".repeat(empty_count);
         let side_alt = "▒".repeat(count_alt);
@@ -183,6 +202,20 @@ pub fn render_top_down_pyramid_angled(
         )));
     }
 
-    let paragraph = Paragraph::new(lines).alignment(ratatui::layout::Alignment::Center);
+    let border_title = if selected_symbol { SELECTED_STRING } else { "" };
+
+    let paragraph = Paragraph::new(lines)
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::new()
+                .borders(Borders::ALL)
+                .title_bottom(border_title)
+                .title_alignment(Alignment::Center)
+                .border_style(if selected_symbol {
+                    color
+                } else {
+                    Color::DarkGray
+                }),
+        );
     frame.render_widget(paragraph, area);
 }
