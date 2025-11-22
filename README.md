@@ -31,6 +31,7 @@ The guessers continue these actions until the correct pattern is guessed.
 
 # TODO
 - [ ] Store tokens
+- [ ] Fix bug with moving around with wasd
 - [ ] Clean up the code
 - [ ] Create a help popup with controls-list
 - [ ] Somehow make it multiplayer over internet
