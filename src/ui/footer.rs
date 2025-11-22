@@ -1,4 +1,4 @@
-use crate::{App, SymbolSize};
+use crate::{App, COLOR_INACTIVE, SymbolSize};
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -9,11 +9,11 @@ use ratatui::{
 
 const SELECTED_STRING: &str = "selected";
 
-pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usize)) {
+pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usize), extra: String) {
     let mode = app.mode.to_string();
     let x = app.current_pos.0;
     let y = app.current_pos.1;
-    let pyramid_nbr = app.data_big.len();
+    let pyramid_nbr = app.active_pattern().len();
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(2)])
@@ -27,18 +27,27 @@ pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usiz
     let text_2 = Text::from(" 2 ").blue();
     let line = "red".red();
     let line2 = "blue".blue();
-    let bla = app
+    let mut bla = app
         .patterns
         .iter()
         .enumerate()
         .map(|(index, pat)| {
-            if index == app.pattern_index {
-                format!(" {index} ").red().underlined()
+            if index >= app.render_start_index && index <= app.render_end_index {
+                if index == app.selected_pattern_index {
+                    format!(" {index} ").red().underlined()
+                } else {
+                    format!(" {index} ").red()
+                }
             } else {
                 format!(" {index} ").white()
             }
         })
         .collect::<Vec<Span>>();
+
+    let selected_pattern_index = app.selected_pattern_index;
+
+    bla.push(format!("{extra}").red().underlined());
+    bla.push(format!(" ({selected_pattern_index})").underlined());
     let pattern_tracker = Paragraph::new(Line::from(bla));
 
     frame.render_widget(pattern_tracker, areas[1]);
@@ -50,6 +59,7 @@ pub fn render_top_down_pyramid(
     height: SymbolSize,
     color: Color,
     selected_symbol: bool,
+    app: &App,
 ) {
     let mut lines = vec![];
 
@@ -134,7 +144,7 @@ pub fn render_top_down_pyramid(
                 .border_style(if selected_symbol {
                     color
                 } else {
-                    Color::DarkGray
+                    COLOR_INACTIVE
                 }),
         );
     frame.render_widget(paragraph, area);
@@ -146,6 +156,7 @@ pub fn render_top_down_pyramid_angled(
     height: SymbolSize,
     color: Color,
     selected_symbol: bool,
+    app: &App,
 ) {
     let mut lines = vec![];
     let pyramid_height = match height {
@@ -202,6 +213,8 @@ pub fn render_top_down_pyramid_angled(
         )));
     }
 
+    let selected_pattern_index = app.selected_pattern_index;
+
     let border_title = if selected_symbol { SELECTED_STRING } else { "" };
 
     let paragraph = Paragraph::new(lines)
@@ -214,7 +227,32 @@ pub fn render_top_down_pyramid_angled(
                 .border_style(if selected_symbol {
                     color
                 } else {
-                    Color::DarkGray
+                    COLOR_INACTIVE
+                }),
+        );
+    frame.render_widget(paragraph, area);
+}
+
+pub fn render_empty(
+    frame: &mut Frame,
+    area: Rect,
+    height: SymbolSize,
+    color: Color,
+    selected_symbol: bool,
+) {
+    let border_title = if selected_symbol { SELECTED_STRING } else { "" };
+
+    let paragraph = Paragraph::new("")
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::new()
+                .borders(Borders::ALL)
+                .title_bottom(border_title)
+                .title_alignment(Alignment::Center)
+                .border_style(if selected_symbol {
+                    color
+                } else {
+                    COLOR_INACTIVE
                 }),
         );
     frame.render_widget(paragraph, area);
