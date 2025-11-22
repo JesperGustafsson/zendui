@@ -9,10 +9,30 @@ The goal of this is to create a TUI game based on [Zendo] while learning Rust an
 
 [Zendo]: https://en.wikipedia.org/wiki/Zendo_(game)
 
-- [x] Traverse the grid and change the size direction of the shape.
-- [x] Save the active grid to a list of patterns that is shown
-- [x] Create a help popup with controls-list
-- [ ] Make the pattern-list responsive
+# Game explanation
+Number of players: 2+
+
+This is a game of patterns. Each pattern is a 3x3 grid where each cell may contain a pyramid with 3 different attributes, size, color and rotation.
+* **size**: small, medium, large
+* **color**: blue, yellow, red
+* **rotation**: straight, angled
+
+The first player (creator) decides on a rule that each pattern should follow and starts by creating both a valid and an invalid pattern.
+
+For example, the rule could be "There must be a big red pyramid in the pattern". The creator would then create two patterns, where one includesa big red pyramid and is set as valid, and another one which does not contain a big red pyramid, marked as invalid.
+
+Afterwards, the other players (guessers), have three options.
+1. Create their own pattern, and ask the creator if it is valid or invalid. 
+2. Create their own pattern, and guess if it's valid or invalid. If the guess is correct, they receive a token.
+3. Use your token to guess the pattern.
+    - If the guess is wrong, the creator needs to disprove it by either creating an invalid pattern following the proposed rule, or creating a valid pattern not following the proposed rule.
+  
+The guessers continue these actions until the correct pattern is guessed. 
+
+# TODO
+- [ ] Store tokens
+- [ ] Clean up the code
+- [ ] Create a help popup with controls-list
+- [ ] Somehow make it multiplayer over internet
 - [ ] Use Ratzilla to use it in the browser
 - [ ] Host it for public viewing
-- [ ] Update README.md with the rules of the game
