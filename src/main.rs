@@ -1,17 +1,15 @@
 use strum_macros::Display;
 mod helpers;
 mod ui;
-use crate::helpers::key_handler::{self, *};
+use crate::helpers::key_handler::*;
 use crate::ui::footer::*;
-use color_eyre::{Result, owo_colors::OwoColorize};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use color_eyre::Result;
+use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
-    buffer::Buffer,
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect, Rows},
-    style::{Color, Style, Stylize},
-    text::{Line, Span, Text},
-    widgets::{Block, BorderType, Cell, Clear, Paragraph, Row, Table, TableState, Widget},
+    layout::{Constraint, Direction, Flex, Layout, Rect},
+    style::Color,
+    widgets::{Block, Clear},
 };
 use std::ops::{Deref, DerefMut};
 
@@ -43,15 +41,7 @@ impl DerefMut for Pattern {
 pub struct App {
     /// Is the application running?
     running: bool,
-    state: TableState,
-    items: Vec<Vec<Data>>,
-    highlight_style: Style,
-    saved_items: Vec<Vec<Vec<Data>>>,
-    saved_correct: Vec<bool>,
-    correct: bool,
     mode: Mode,
-    box_height: u16,
-    show_help: bool,
     current_pos: (usize, usize),
     data_big: PatternParent,
     patterns: Vec<PatternParent>,
@@ -84,22 +74,10 @@ enum PyramidType {
     Angled,
 }
 
-#[derive(Debug, Clone)]
-enum SymbolDirection {
-    LEFT,
-    RIGHT,
-    UP,
-    DOWN,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Display)]
 enum Mode {
-    ADDING,
     VIEWING,
-    CHOSING,
     EDITING,
-    TESTING,
-    HISTORY,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,23 +85,6 @@ enum SymbolSize {
     SMALL,
     MEDIUM,
     LARGE,
-}
-
-#[derive(Debug, Clone)]
-struct Data {
-    name: char,
-    color: Color,
-    direction: SymbolDirection,
-    size: SymbolSize,
-}
-
-fn gen_default_cell() -> Data {
-    return Data {
-        name: ' ',
-        color: Color::Black,
-        direction: SymbolDirection::UP,
-        size: SymbolSize::SMALL,
-    };
 }
 
 fn popup_area(area: Rect, length: u16) -> Rect {
@@ -170,30 +131,10 @@ const PATTERN_BORDER_INVALID: Color = Color::Rgb(150, 55, 55);
 const PATTERN_BORDER_INVALID_ACTIVE: Color = Color::Rgb(255, 0, 0);
 
 impl App {
-    /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        let highlight_style = Style::new()
-            .italic()
-            .bold()
-            .bg(Color::Rgb((20), (20), (20)));
-
-        let num_items = 4;
-
-        let data_vec: Vec<Vec<Data>> = (0..num_items)
-            .map(|_| (0..num_items).map(|_| gen_default_cell()).collect())
-            .collect();
-
         Self {
             running: true,
-            state: TableState::default().with_selected_cell((0, 0)),
-            items: data_vec,
-            highlight_style: highlight_style,
-            saved_items: vec![],
-            correct: false,
-            saved_correct: vec![],
             mode: Mode::VIEWING,
-            box_height: 7,
-            show_help: false,
             current_pos: (0, 0),
             data_big: PatternParent {
                 data: Pattern(vec![]),
@@ -230,7 +171,7 @@ impl App {
     }
 
     fn render_footer(&mut self, frame: &mut Frame, layout: Rect, extra: String) {
-        render_footer(self, frame, layout, self.current_pos, extra);
+        render_footer(self, frame, layout, extra);
     }
 
     fn render(&mut self, frame: &mut Frame) {
@@ -238,7 +179,6 @@ impl App {
             .direction(Direction::Vertical)
             .constraints([Constraint::Fill(1), Constraint::Length(2)])
             .split(frame.area());
-        // self.render_saved(frame, layout[0]);
 
         let inner_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -249,28 +189,11 @@ impl App {
             .constraints((0..self.pattern_rows).map(|_| Constraint::Fill(1)))
             .split(inner_layout[0]);
 
-        let edit_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints((0..HEIGHT).map(|_| Constraint::Length(10)))
-            .split(saved_layouts[0]);
-
-        // self.render_pattern(
-        //     frame,
-        //     saved_layouts[0],
-        //     self.data_big.clone(),
-        //     "0".to_string(),
-        // );
-        //
-        //
-        //
-        //
-
         let render_end_index2 = (self.render_end_index + 1).min(self.patterns.len());
         let patterns_to_render =
             self.patterns.clone()[self.render_start_index..render_end_index2].to_vec();
 
         for (index, saved_pattern) in patterns_to_render.iter().enumerate() {
-            // let actual_index = self.patterns.len() - 1 - index;
             let actual_index = index;
             let layout_row_index = actual_index / (self.patterns_per_row);
             let layout_col_index = actual_index % (self.patterns_per_row);
@@ -279,12 +202,10 @@ impl App {
                 .constraints((0..self.patterns_per_row).map(|_| Constraint::Fill(1)))
                 .split(saved_layouts[layout_row_index]);
 
-            let extr = format!("{layout_row_index},{layout_col_index}[{actual_index}]");
             self.render_pattern(
                 frame,
                 sub_layout[layout_col_index],
                 saved_pattern.clone(),
-                extr,
                 index,
             );
             // self.render_pattern(frame, &prev_layout, &prev_pattern.unwrap().clone());
@@ -296,7 +217,7 @@ impl App {
             let a = popup_area(frame.area(), 34);
             frame.render_widget(Clear, a);
 
-            self.render_pattern(frame, a, self.data_big.clone(), "0".to_string(), 0);
+            self.render_pattern(frame, a, self.data_big.clone(), 0);
         }
     }
 
@@ -305,7 +226,6 @@ impl App {
         frame: &mut Frame<'_>,
         edit_layout: Rect,
         pattern_parent: PatternParent,
-        extra: String,
         pattern_index: usize,
     ) {
         let pattern = pattern_parent.data;
@@ -337,7 +257,7 @@ impl App {
         let global_pattern_index = self.render_start_index + pattern_index;
         let is_selected = global_pattern_index == self.selected_pattern_index;
 
-        if (is_selected) {
+        if is_selected {
             match border_color {
                 PATTERN_BORDER_VALID => border_color = PATTERN_BORDER_VALID_ACTIVE,
                 PATTERN_BORDER_INVALID => border_color = PATTERN_BORDER_INVALID_ACTIVE,
@@ -386,7 +306,6 @@ impl App {
                                 pyramid.size,
                                 pyramid_color,
                                 selected_symbol,
-                                self,
                             )
                         } else {
                             render_top_down_pyramid(
@@ -395,18 +314,11 @@ impl App {
                                 pyramid.size,
                                 pyramid_color,
                                 selected_symbol,
-                                self,
                             )
                         }
                     }
 
-                    _ => render_empty(
-                        frame,
-                        *row_layout,
-                        SymbolSize::MEDIUM,
-                        Color::White,
-                        selected_symbol,
-                    ),
+                    _ => render_empty(frame, *row_layout, Color::White, selected_symbol),
                 }
             }
         }

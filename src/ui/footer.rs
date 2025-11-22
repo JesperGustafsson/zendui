@@ -3,13 +3,13 @@ use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 }; // import your App type
 
 const SELECTED_STRING: &str = "selected";
 
-pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usize), extra: String) {
+pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, extra: String) {
     let mode = app.mode.to_string();
     let x = app.current_pos.0;
     let y = app.current_pos.1;
@@ -23,15 +23,11 @@ pub fn render_footer(app: &App, frame: &mut Frame, area: Rect, pos: (usize, usiz
     ));
     frame.render_widget(help_paragraph, areas[0]);
 
-    let text_1 = Text::from(" 1 ").red();
-    let text_2 = Text::from(" 2 ").blue();
-    let line = "red".red();
-    let line2 = "blue".blue();
     let mut bla = app
         .patterns
         .iter()
         .enumerate()
-        .map(|(index, pat)| {
+        .map(|(index, _pat)| {
             if index >= app.render_start_index && index <= app.render_end_index {
                 if index == app.selected_pattern_index {
                     format!(" {index} ").red().underlined()
@@ -59,7 +55,6 @@ pub fn render_top_down_pyramid(
     height: SymbolSize,
     color: Color,
     selected_symbol: bool,
-    app: &App,
 ) {
     let mut lines = vec![];
 
@@ -67,17 +62,15 @@ pub fn render_top_down_pyramid(
         SymbolSize::SMALL => 4,
         SymbolSize::MEDIUM => 6,
         SymbolSize::LARGE => 8,
-        _ => 6,
     };
 
     let empty_line_nbr = match height {
         SymbolSize::SMALL => 2,
         SymbolSize::MEDIUM => 1,
         SymbolSize::LARGE => 0,
-        _ => 1,
     };
 
-    for i in 0..empty_line_nbr {
+    for _ in 0..empty_line_nbr {
         let empty = " ".repeat(1);
 
         lines.push(Line::from(Span::styled(
@@ -114,24 +107,6 @@ pub fn render_top_down_pyramid(
 
     // Consider writing triangles with these fullheight triangle characters from JuliaFont. Also consider using .bg(color)
 
-    let lines_2 = format!(
-        "
-████
-████████
-████████████
-████████████
-████████
-████
-"
-    );
-
-    let lines_3 = format!(
-        "🭇🬼
-🭊🭁🭍🬿
-🭥🭒🭝🭚
-🭢🭗"
-    );
-
     let border_title = if selected_symbol { SELECTED_STRING } else { "" };
 
     let paragraph = Paragraph::new(lines)
@@ -156,24 +131,21 @@ pub fn render_top_down_pyramid_angled(
     height: SymbolSize,
     color: Color,
     selected_symbol: bool,
-    app: &App,
 ) {
     let mut lines = vec![];
     let pyramid_height = match height {
         SymbolSize::SMALL => 4,
         SymbolSize::MEDIUM => 6,
         SymbolSize::LARGE => 8,
-        _ => 12,
     };
 
     let empty_line_nbr = match height {
         SymbolSize::SMALL => 2,
         SymbolSize::MEDIUM => 1,
         SymbolSize::LARGE => 0,
-        _ => 1,
     };
 
-    for i in 0..empty_line_nbr {
+    for _ in 0..empty_line_nbr {
         let empty = " ".repeat(1);
 
         lines.push(Line::from(Span::styled(
@@ -186,7 +158,6 @@ pub fn render_top_down_pyramid_angled(
     for i in 0..(pyramid_height / 2) {
         let count_alt = 1 + i * 2;
         let empty_count = pyramid_height - 1 - i * 2;
-        let count = pyramid_height - empty_count;
         let side = "█".repeat(count_alt);
         let empty = " ".repeat(empty_count);
         let side_alt = "▒".repeat(count_alt);
@@ -201,7 +172,6 @@ pub fn render_top_down_pyramid_angled(
     for i in 0..(pyramid_height / 2) {
         let count_alt = pyramid_height - 1 - i * 2;
         let empty_count = 1 + i * 2;
-        let count = pyramid_height - empty_count;
         let side = "█".repeat(count_alt);
         let empty = " ".repeat(empty_count);
         let side_alt = "▒".repeat(count_alt);
@@ -212,8 +182,6 @@ pub fn render_top_down_pyramid_angled(
             Style::default().fg(color),
         )));
     }
-
-    let selected_pattern_index = app.selected_pattern_index;
 
     let border_title = if selected_symbol { SELECTED_STRING } else { "" };
 
@@ -233,13 +201,7 @@ pub fn render_top_down_pyramid_angled(
     frame.render_widget(paragraph, area);
 }
 
-pub fn render_empty(
-    frame: &mut Frame,
-    area: Rect,
-    height: SymbolSize,
-    color: Color,
-    selected_symbol: bool,
-) {
+pub fn render_empty(frame: &mut Frame, area: Rect, color: Color, selected_symbol: bool) {
     let border_title = if selected_symbol { SELECTED_STRING } else { "" };
 
     let paragraph = Paragraph::new("")

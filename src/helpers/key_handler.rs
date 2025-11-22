@@ -1,9 +1,8 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, ModifierKeyCode};
-use ratatui::style::Color;
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
-    App, COLOR_BLUE, COLOR_BLUE_ACTIVE, COLOR_RED, COLOR_RED_ACTIVE, COLOR_YELLOW,
-    COLOR_YELLOW_ACTIVE, Datos, HEIGHT, Mode, Pattern, PyramidType, SymbolSize, WIDTH,
+    App, COLOR_BLUE, COLOR_RED, COLOR_YELLOW, Datos, HEIGHT, Mode, Pattern, PyramidType,
+    SymbolSize, WIDTH,
 };
 
 fn save_pattern(app: &mut App) {
@@ -176,12 +175,11 @@ pub fn on_key_event(app: &mut App, key: KeyEvent) {
                 SymbolSize::SMALL => SymbolSize::MEDIUM,
                 SymbolSize::MEDIUM => SymbolSize::LARGE,
                 SymbolSize::LARGE => SymbolSize::SMALL,
-                _ => SymbolSize::MEDIUM,
             };
             let old_type = object.unwrap().pyramid_type;
             let old_color = object.unwrap().color;
 
-            let pattern = if app.mode == Mode::EDITING {
+            if app.mode == Mode::EDITING {
                 app.data_big.data.remove(index_of_selected.unwrap());
 
                 app.data_big.data.push(Datos {
@@ -282,15 +280,14 @@ pub fn on_key_event(app: &mut App, key: KeyEvent) {
             let old_index = app.selected_pattern_index;
             let old_index_modulo = app.selected_pattern_index % app.patterns_per_row;
             app.selected_pattern_index = app.selected_pattern_index.saturating_sub(1);
-            if (app.selected_pattern_index % app.patterns_per_row > old_index_modulo) {
+            if app.selected_pattern_index % app.patterns_per_row > old_index_modulo {
                 app.selected_pattern_index = old_index;
             }
         }
         (_, KeyCode::Char('D')) => {
             let old_index = app.selected_pattern_index;
-            let old_index_modulo = app.selected_pattern_index % app.patterns_per_row;
-            app.selected_pattern_index = (app.selected_pattern_index + 1);
-            if (app.selected_pattern_index % app.patterns_per_row == 0) {
+            app.selected_pattern_index = app.selected_pattern_index + 1;
+            if app.selected_pattern_index % app.patterns_per_row == 0 {
                 app.selected_pattern_index = old_index;
             }
         }
@@ -300,7 +297,7 @@ pub fn on_key_event(app: &mut App, key: KeyEvent) {
             app.selected_pattern_index = app
                 .selected_pattern_index
                 .saturating_sub(app.patterns_per_row);
-            if (app.selected_pattern_index % app.patterns_per_row != old_index_modulo) {
+            if app.selected_pattern_index % app.patterns_per_row != old_index_modulo {
                 app.selected_pattern_index = old_index;
             }
 
@@ -312,10 +309,10 @@ pub fn on_key_event(app: &mut App, key: KeyEvent) {
             let old_index = app.selected_pattern_index;
             let old_index_modulo = app.selected_pattern_index % app.patterns_per_row;
 
-            app.selected_pattern_index = (app.selected_pattern_index + app.patterns_per_row);
+            app.selected_pattern_index = app.selected_pattern_index + app.patterns_per_row;
 
-            if ((app.selected_pattern_index % app.patterns_per_row != old_index_modulo)
-                || (app.selected_pattern_index > app.patterns.len().saturating_sub(1)))
+            if (app.selected_pattern_index % app.patterns_per_row != old_index_modulo)
+                || (app.selected_pattern_index > app.patterns.len().saturating_sub(1))
             {
                 app.selected_pattern_index = old_index;
             }
@@ -345,18 +342,4 @@ fn step_right(app: &mut App, step_size: usize) {
 
 fn modify_pattern(app: &mut App) {
     app.patterns[app.pattern_index] = app.data_big.clone();
-}
-
-fn set_pattern(app: &mut App) {
-    let last_pattern = app.patterns.get(app.pattern_index);
-
-    let next_pattern = match last_pattern {
-        Some(last_pattern) => last_pattern.clone(),
-        _ => crate::PatternParent {
-            data: Pattern(vec![]),
-            valid: true,
-        },
-    };
-
-    app.data_big = next_pattern;
 }
